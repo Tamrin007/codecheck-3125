@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"strconv"
+	"time"
 
 	"github.com/codegangsta/cli"
 )
@@ -39,20 +39,49 @@ func getCityInformationFromJSON() IrohaCity {
 	return irohaCity
 }
 
-func doMain(c *cli.Context) {
-	line := c.Args()[0]
-	fmt.Println("line: ", line)
-	station := c.Args()[1]
-	fmt.Println("station: ", station)
-	direction := c.Args()[2]
-	fmt.Println("direction:", direction)
-	if len(c.Args()) == 4 {
-		hour, err := strconv.Atoi(c.Args()[3])
-		if err != nil {
-			log.Println(err)
+func createTimeTable() map[string][]string {
+	// 始発電車の時刻から終電までの時刻を求める
+	// キーに時間、値は分の配列とする
+	timeTable := map[string][]string{}
+	var trainsByHour []string
+
+	firstTrain, _ := time.Parse("15:04", "06:00")
+	hour := firstTrain.Format("15")
+	minutes := firstTrain.Format("04")
+	trainsByHour = append(trainsByHour, minutes)
+	timeTable[hour] = trainsByHour
+
+	secondTrain, _ := time.Parse("15:04", "06:12")
+	hour = secondTrain.Format("15")
+	minutes = secondTrain.Format("04")
+	trainsByHour = append(trainsByHour, minutes)
+	timeTable[hour] = trainsByHour
+
+	return timeTable
+}
+
+func printTimeTable(timeTable map[string][]string) {
+	for hour, trains := range timeTable {
+		fmt.Print(hour, ": ")
+		for _, minutes := range trains {
+			fmt.Print(minutes, " ")
 		}
-		fmt.Println("hour: ", hour)
+		fmt.Println("")
 	}
-	IrohaCity := getCityInformationFromJSON()
-	fmt.Println(IrohaCity)
+}
+
+func doMain(c *cli.Context) {
+	// line := c.Args()[0]
+	// station := c.Args()[1]
+	// direction := c.Args()[2]
+	// if len(c.Args()) == 4 {
+	// 	hour, err := strconv.Atoi(c.Args()[3])
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 	}
+	// 	fmt.Println("hour: ", hour)
+	// }
+	// IrohaCity := getCityInformationFromJSON()
+	timeTable := createTimeTable()
+	printTimeTable(timeTable)
 }
