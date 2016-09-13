@@ -39,15 +39,16 @@ func getCityInformationFromJSON() IrohaCity {
 }
 
 func doMain(c *cli.Context) {
-	for i := 0; i < len(c.Args()); i++ {
-		fmt.Println(c.Args()[i])
+	line := c.Args()[0]
+	fmt.Println("line: ", line)
+	station := c.Args()[1]
+	fmt.Println("station: ", station)
+	direction := c.Args()[2]
+	fmt.Println("direction:", direction)
+	if len(c.Args()) == 4 {
+		hour := c.Args()[3]
+		fmt.Println("hour: ", hour)
 	}
 	IrohaCity := getCityInformationFromJSON()
-	for _, line := range IrohaCity.Lines {
-		fmt.Println(line.Name)
-		for _, station := range line.Stations {
-			fmt.Print(station.Name + " ")
-		}
-		fmt.Println("")
-	}
+	fmt.Println(IrohaCity)
 }
