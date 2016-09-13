@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strconv"
 
 	"github.com/codegangsta/cli"
 )
@@ -46,7 +47,10 @@ func doMain(c *cli.Context) {
 	direction := c.Args()[2]
 	fmt.Println("direction:", direction)
 	if len(c.Args()) == 4 {
-		hour := c.Args()[3]
+		hour, err := strconv.Atoi(c.Args()[3])
+		if err != nil {
+			log.Println(err)
+		}
 		fmt.Println("hour: ", hour)
 	}
 	IrohaCity := getCityInformationFromJSON()
