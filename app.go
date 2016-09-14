@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/codegangsta/cli"
@@ -39,49 +41,59 @@ func getCityInformationFromJSON() IrohaCity {
 	return irohaCity
 }
 
-func createTimeTable() map[string][]string {
+func createTimeTable(line string, station string, direction string) map[string][]string {
 	// 始発電車の時刻から終電までの時刻を求める
 	// キーに時間、値は分の配列とする
 	timeTable := map[string][]string{}
-	var trainsByHour []string
 
 	firstTrain, _ := time.Parse("15:04", "06:00")
-	hour := firstTrain.Format("15")
-	minutes := firstTrain.Format("04")
-	trainsByHour = append(trainsByHour, minutes)
-	timeTable[hour] = trainsByHour
-
-	secondTrain, _ := time.Parse("15:04", "06:12")
-	hour = secondTrain.Format("15")
-	minutes = secondTrain.Format("04")
-	trainsByHour = append(trainsByHour, minutes)
-	timeTable[hour] = trainsByHour
+	limit, _ := time.Parse("15:04", "23:00")
+	for train := firstTrain; train.Before(limit); train = train.Add(6 * time.Minute) {
+		hour := train.Format("15")
+		minutes := train.Format("04")
+		timeTable[hour] = append(timeTable[hour], minutes)
+	}
 
 	return timeTable
 }
 
-func printTimeTable(timeTable map[string][]string) {
-	for hour, trains := range timeTable {
-		fmt.Print(hour, ": ")
-		for _, minutes := range trains {
-			fmt.Print(minutes, " ")
+func printAllTimeTable(timeTable map[string][]string) {
+	var keys []string
+	for hour := range timeTable {
+		keys = append(keys, hour)
+	}
+	sort.Strings(keys)
+	for _, hour := range keys {
+		output := fmt.Sprint(hour, ":")
+		for _, minutes := range timeTable[hour] {
+			output += fmt.Sprint(" ", minutes)
 		}
-		fmt.Println("")
+		fmt.Println(output)
 	}
 }
 
+func printHourlyTimeTable(timeTable map[string][]string, hour string) {
+	output := fmt.Sprint(hour, ":")
+	for _, minutes := range timeTable[hour] {
+		output += fmt.Sprint(" ", minutes)
+	}
+	fmt.Println(output)
+}
+
 func doMain(c *cli.Context) {
-	// line := c.Args()[0]
-	// station := c.Args()[1]
-	// direction := c.Args()[2]
-	// if len(c.Args()) == 4 {
-	// 	hour, err := strconv.Atoi(c.Args()[3])
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 	}
-	// 	fmt.Println("hour: ", hour)
-	// }
 	// IrohaCity := getCityInformationFromJSON()
-	timeTable := createTimeTable()
-	printTimeTable(timeTable)
+	line := c.Args()[0]
+	station := c.Args()[1]
+	direction := c.Args()[2]
+	timeTable := createTimeTable(line, station, direction)
+	if len(c.Args()) == 4 {
+		hour, err := strconv.Atoi(c.Args()[3])
+		if err != nil {
+			fmt.Println(err)
+		}
+		zeroPaddedHour := fmt.Sprintf("%02d", hour)
+		printHourlyTimeTable(timeTable, zeroPaddedHour)
+	} else {
+		printAllTimeTable(timeTable)
+	}
 }
