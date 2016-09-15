@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -42,11 +43,35 @@ func getCityInformationFromJSON() IrohaCity {
 }
 
 func createTimeTable(line string, station string, direction string) map[string][]string {
+	// 始発電車の時刻から終電までの時刻を求める
+	// キーに時間、値は分の配列とする
 	IrohaCity := getCityInformationFromJSON()
+	timeTable := map[string][]string{}
+	var (
+		firstTrain     time.Time
+		firstTrainAtA7 time.Time
+		interval       int
+	)
+
+	if line == "A" {
+		firstTrain, _ = time.Parse("15:04", "05:55")
+		firstTrainAtA7, _ = time.Parse("15:04", "06:10")
+		interval = 5
+	}
+	if line == "B" {
+		firstTrain, _ = time.Parse("15:04", "06:00")
+		interval = 6
+	}
+
+	limit, _ := time.Parse("15:04", "23:00")
 	delay := 0
+	delayAtA7 := 0
 	for _, Line := range IrohaCity.Lines {
 		if Line.Name == line {
 			for _, Station := range Line.Stations {
+				if Station.Name == "A7" {
+					delayAtA7 = delay
+				}
 				if Station.Name == station {
 					break
 				}
@@ -54,18 +79,25 @@ func createTimeTable(line string, station string, direction string) map[string][
 			}
 		}
 	}
-	// 始発電車の時刻から終電までの時刻を求める
-	// キーに時間、値は分の配列とする
-	timeTable := map[string][]string{}
 
-	firstTrain, _ := time.Parse("15:04", "06:00")
 	firstTrain = firstTrain.Add(time.Duration(delay) * time.Minute)
-	limit, _ := time.Parse("15:04", "23:00")
+	firstTrainAtA7 = firstTrainAtA7.Add(time.Duration(delay-delayAtA7) * time.Minute)
 	limit = limit.Add(time.Duration(delay) * time.Minute)
-	for train := firstTrain; train.Before(limit); train = train.Add(6 * time.Minute) {
+	for i, train := 0, firstTrain; train.Before(limit); train = train.Add(time.Duration(interval) * time.Minute) {
+		// 1 本おきに A7 行と A13 行 かつ 始発は A7 行
+		re := regexp.MustCompile("A")
+		stationNum, _ := strconv.Atoi(re.ReplaceAllString(station, ""))
+		if line == "A" && stationNum >= 7 && i == 0 {
+			timeTable["06"] = append(timeTable[firstTrainAtA7.Format("15")], firstTrainAtA7.Format("04"))
+		}
+		if line == "A" && stationNum >= 7 && i%2 == 0 {
+			i++
+			continue
+		}
 		hour := train.Format("15")
 		minutes := train.Format("04")
 		timeTable[hour] = append(timeTable[hour], minutes)
+		i++
 	}
 
 	return timeTable
