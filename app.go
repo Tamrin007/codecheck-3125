@@ -42,12 +42,26 @@ func getCityInformationFromJSON() IrohaCity {
 }
 
 func createTimeTable(line string, station string, direction string) map[string][]string {
+	IrohaCity := getCityInformationFromJSON()
+	delay := 0
+	for _, Line := range IrohaCity.Lines {
+		if Line.Name == line {
+			for _, Station := range Line.Stations {
+				if Station.Name == station {
+					break
+				}
+				delay += Station.Duration
+			}
+		}
+	}
 	// 始発電車の時刻から終電までの時刻を求める
 	// キーに時間、値は分の配列とする
 	timeTable := map[string][]string{}
 
 	firstTrain, _ := time.Parse("15:04", "06:00")
+	firstTrain = firstTrain.Add(time.Duration(delay) * time.Minute)
 	limit, _ := time.Parse("15:04", "23:00")
+	limit = limit.Add(time.Duration(delay) * time.Minute)
 	for train := firstTrain; train.Before(limit); train = train.Add(6 * time.Minute) {
 		hour := train.Format("15")
 		minutes := train.Format("04")
@@ -73,15 +87,19 @@ func printAllTimeTable(timeTable map[string][]string) {
 }
 
 func printHourlyTimeTable(timeTable map[string][]string, hour string) {
-	output := fmt.Sprint(hour, ":")
+	var trains string
 	for _, minutes := range timeTable[hour] {
-		output += fmt.Sprint(" ", minutes)
+		trains += fmt.Sprint(" ", minutes)
 	}
-	fmt.Println(output)
+	if trains == "" {
+		fmt.Println("No train")
+		return
+	}
+	fmt.Print(hour, ":")
+	fmt.Println(trains)
 }
 
 func doMain(c *cli.Context) {
-	// IrohaCity := getCityInformationFromJSON()
 	line := c.Args()[0]
 	station := c.Args()[1]
 	direction := c.Args()[2]
