@@ -224,19 +224,17 @@ func doMain(c *cli.Context) {
 		log.Fatal(msg)
 	}
 	station := c.Args()[1]
-	re := regexp.MustCompile(line)
-	stationNum, err := strconv.Atoi(re.ReplaceAllString(station, ""))
-	if err != nil {
-		msg := "第二引数は A7 のように駅名を入力して下さい"
-		log.Fatal(msg)
-	}
-	if line == "A" && stationNum > 13 || line == "B" && stationNum > 5 {
-		msg := "A" + strconv.Itoa(stationNum) + "駅は存在しません"
-		log.Fatal(msg)
+	if station != "A7" {
+		re := regexp.MustCompile("A")
+		stationNum, _ := strconv.Atoi(re.ReplaceAllString(station, ""))
+		if line == "A" && stationNum > 13 || line == "B" && stationNum > 5 {
+			msg := "A" + strconv.Itoa(stationNum) + "駅は存在しません"
+			log.Fatal(msg)
+		}
 	}
 	direction := c.Args()[2]
-	if direction != "U" && line != "D" {
-		msg := "第一引数は U または D を指定してください"
+	if direction != "U" && direction != "D" {
+		msg := "第三引数は U または D を指定してください"
 		log.Fatal(msg)
 	}
 	timeTable := createTimeTable(line, station, direction)
