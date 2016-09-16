@@ -42,22 +42,7 @@ func getCityInformationFromJSON() IrohaCity {
 	return irohaCity
 }
 
-func createTimeTable(line string, station string, direction string) map[string][]string {
-	// 始発電車の時刻から終電までの時刻を求める
-	// キーに時間、値は分の配列とする
-	IrohaCity := getCityInformationFromJSON()
-	timeTable := map[string][]string{}
-	var (
-		firstTrain       time.Time
-		firstTrainFromA7 time.Time
-		interval         int
-		limit            time.Time
-		limitAtA7        time.Time
-		delay            int
-		delayFromA7      int
-	)
-
-	// TODO: delay の計算は関数に分ける
+func calcDelay(IrohaCity IrohaCity, line, direction, station string) (delay, delayFromA7 int) {
 	for _, Line := range IrohaCity.Lines {
 		if Line.Name == line && direction == "U" {
 			for _, Station := range Line.Stations {
@@ -82,38 +67,85 @@ func createTimeTable(line string, station string, direction string) map[string][
 			}
 		}
 	}
+	return delay, delayFromA7
+}
 
-	// TODO: 初期値の設定は関数に分ける
+func setInterval(line, direction string) (interval int) {
 	if line == "A" && direction == "U" {
-		firstTrain, _ = time.Parse("15:04", "05:55")
-		firstTrainFromA7, _ = time.Parse("15:04", "06:10")
-		limit, _ = time.Parse("15:04", "23:00")
 		interval = 5
 	}
 	if line == "A" && direction == "D" {
-		firstTrain, _ = time.Parse("15:04", "05:52")
-		firstTrainFromA7, _ = time.Parse("15:04", "06:06")
-		limit, _ = time.Parse("15:04", "23:00")
-		// TODO: A8 D 最終電車の発車時刻にしたい
-		limitAtA7, _ = time.Parse("15:04", "23:07")
 		interval = 5
 	}
 	if line == "B" && direction == "U" {
-		firstTrain, _ = time.Parse("15:04", "06:00")
-		limit, _ = time.Parse("15:04", "23:00")
 		interval = 6
 	}
 	if line == "B" && direction == "D" {
-		firstTrain, _ = time.Parse("15:04", "06:11")
+		interval = 6
+	}
+	return interval
+}
+
+func setLimit(line, direction string, delay int) (limit time.Time) {
+	if line == "A" && direction == "U" {
+		limit, _ = time.Parse("15:04", "23:00")
+	}
+	if line == "A" && direction == "D" {
+		limit, _ = time.Parse("15:04", "23:00")
+	}
+	if line == "B" && direction == "U" {
+		limit, _ = time.Parse("15:04", "23:00")
+	}
+	if line == "B" && direction == "D" {
 		// TODO: B5 U 最終電車の発車時刻にしたい
 		// 上りテーブルも下りテーブルも作れば参照できる？
 		limit, _ = time.Parse("15:04", "23:06")
-		interval = 6
+	}
+	limit = limit.Add(time.Duration(delay) * time.Minute)
+	return limit
+}
+
+func setFirstTrain(line, direction string, delay int) (firstTrain time.Time) {
+	if line == "A" && direction == "U" {
+		firstTrain, _ = time.Parse("15:04", "05:55")
+	}
+	if line == "A" && direction == "D" {
+		firstTrain, _ = time.Parse("15:04", "05:52")
+	}
+	if line == "B" && direction == "U" {
+		firstTrain, _ = time.Parse("15:04", "06:00")
+	}
+	if line == "B" && direction == "D" {
+		firstTrain, _ = time.Parse("15:04", "06:11")
 	}
 	firstTrain = firstTrain.Add(time.Duration(delay) * time.Minute)
-	firstTrainFromA7 = firstTrainFromA7.Add(time.Duration(delay-delayFromA7) * time.Minute)
+	return firstTrain
+}
 
-	limit = limit.Add(time.Duration(delay) * time.Minute)
+func createTimeTable(line string, station string, direction string) map[string][]string {
+	// 始発電車の時刻から終電までの時刻を求める
+	// キーに時間、値は分の配列とする
+	IrohaCity := getCityInformationFromJSON()
+	timeTable := map[string][]string{}
+	var (
+		firstTrainFromA7 time.Time
+		limitAtA7        time.Time
+	)
+
+	delay, delayFromA7 := calcDelay(IrohaCity, line, direction, station)
+	firstTrain := setFirstTrain(line, direction, delay)
+	interval := setInterval(line, direction)
+	limit := setLimit(line, direction, delay)
+
+	if line == "A" && direction == "U" {
+		firstTrainFromA7, _ = time.Parse("15:04", "06:10")
+	}
+	if line == "A" && direction == "D" {
+		firstTrainFromA7, _ = time.Parse("15:04", "06:06")
+		// TODO: A8 D 最終電車の発車時刻にしたい
+		limitAtA7, _ = time.Parse("15:04", "23:07")
+	}
+	firstTrainFromA7 = firstTrainFromA7.Add(time.Duration(delay-delayFromA7) * time.Minute)
 
 	re := regexp.MustCompile("A")
 	stationNum, _ := strconv.Atoi(re.ReplaceAllString(station, ""))
