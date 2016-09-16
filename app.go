@@ -214,14 +214,36 @@ func printHourlyTimeTable(timeTable map[string][]string, hour string) {
 }
 
 func doMain(c *cli.Context) {
+	if len(c.Args()) < 3 || len(c.Args()) > 4 {
+		msg := "引数は 3 個または 4 個にしてください\n" + "ex) myapp A A5 U 13, myapp A A5 U\n"
+		log.Fatal(msg)
+	}
 	line := c.Args()[0]
+	if line != "A" && line != "B" {
+		msg := "第一引数は A または B を指定してください"
+		log.Fatal(msg)
+	}
 	station := c.Args()[1]
+	re := regexp.MustCompile(line)
+	stationNum, err := strconv.Atoi(re.ReplaceAllString(station, ""))
+	if err != nil {
+		msg := "第二引数は A7 のように駅名を入力して下さい"
+		log.Fatal(msg)
+	}
+	if line == "A" && stationNum > 13 || line == "B" && stationNum > 5 {
+		msg := "A" + strconv.Itoa(stationNum) + "駅は存在しません"
+		log.Fatal(msg)
+	}
 	direction := c.Args()[2]
+	if direction != "U" && line != "D" {
+		msg := "第一引数は U または D を指定してください"
+		log.Fatal(msg)
+	}
 	timeTable := createTimeTable(line, station, direction)
 	if len(c.Args()) == 4 {
 		hour, err := strconv.Atoi(c.Args()[3])
 		if err != nil {
-			fmt.Println(err)
+			log.Fatal(err)
 		}
 		zeroPaddedHour := fmt.Sprintf("%02d", hour)
 		printHourlyTimeTable(timeTable, zeroPaddedHour)
